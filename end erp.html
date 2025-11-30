@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ERP — Animated Dashboard</title>
+<style>
+  :root{
+    --bg-1: #071126;
+    --bg-2: #0d1b30;
+    --card: rgba(255,255,255,0.06);
+    --accent-from: #3dd6c5;
+    --accent-to: #3fa3ff;
+    --muted: #9fb0c9;
+    --glass: rgba(255,255,255,0.04);
+    --duration: 480ms;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(180deg,var(--bg-1) 0%,var(--bg-2) 100%);
+    color: #eaf2ff;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    min-height:100vh;
+  }
+
+  .container{
+    max-width:920px;
+    margin:32px auto;
+    padding:20px;
+  }
+
+  /* App card common */
+  .page {
+    display:none;
+    max-width:520px;
+    margin:40px auto;
+    padding:22px;
+    border-radius:14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+    box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+    border:1px solid rgba(255,255,255,0.03);
+    transform-origin:center;
+    overflow:hidden;
+  }
+
+  .page.active { display:block; }
+
+  /* Transition (enter/exit) */
+  .page.enter { animation: pageIn var(--duration) ease both; }
+  .page.exit  { animation: pageOut var(--duration) ease both; }
+
+  @keyframes pageIn {
+    0% { opacity:0; transform: translateY(18px) scale(0.995); filter: blur(6px); }
+    100% { opacity:1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  @keyframes pageOut {
+    0% { opacity:1; transform: translateY(0) scale(1); filter: blur(0); }
+    100% { opacity:0; transform: translateY(-12px) scale(0.995); filter: blur(6px); }
+  }
+
+  h2{ text-align:center; margin:0 0 8px 0; font-size:20px; color:#f7fbff }
+  p.muted{ color:var(--muted); margin-top:4px; text-align:center }
+
+  label{ display:block; margin-top:12px; color:var(--muted); font-size:13px }
+  input[type="text"], input[type="password"], select {
+    width:100%;
+    margin-top:8px;
+    padding:12px 14px;
+    border-radius:10px;
+    border: 1px solid rgba(255,255,255,0.04);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    color: #eaf2ff;
+    outline:none;
+    transition: box-shadow 160ms ease, transform 160ms ease;
+    font-size:15px;
+  }
+  input:focus, select:focus {
+    box-shadow: 0 6px 18px rgba(63,163,255,0.12);
+    transform: translateY(-2px);
+    border-color: rgba(63,163,255,0.45);
+  }
+
+  .btn {
+    display:inline-block;
+    width:100%;
+    margin-top:16px;
+    padding:12px 14px;
+    border-radius:12px;
+    text-align:center;
+    font-weight:600;
+    cursor:pointer;
+    border: none;
+    color:white;
+    background: linear-gradient(90deg,var(--accent-from),var(--accent-to));
+    box-shadow: 0 8px 24px rgba(63,163,255,0.12);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+    font-size:15px;
+  }
+  .btn:hover { transform: translateY(-4px); box-shadow: 0 16px 38px rgba(63,163,255,0.18); }
+
+  /* small top bar */
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:8px;
+  }
+  .brand {
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand .logo{
+    width:44px; height:44px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, rgba(61,214,197,0.16), rgba(63,163,255,0.14));
+    font-size:22px;
+    border:1px solid rgba(255,255,255,0.04);
+  }
+  .brand .title { font-weight:700; color:#f7fbff; }
+
+  /* small utility */
+  .row { display:flex; gap:12px; align-items:center; }
+  .center { text-align:center; }
+
+  /* Summary box with card flip style */
+  .summary-box {
+    margin-top:12px;
+    padding:14px;
+    border-radius:10px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  .summary-box p { margin:6px 0; font-size:15px; color:#e6f2ff }
+
+  /* Dashboard stat card */
+  .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+  .stat-card {
+    padding:12px; border-radius:10px; background:var(--glass); border:1px solid rgba(255,255,255,0.02);
+    text-align:left;
+  }
+  .stat-card h3{ margin:0; font-size:14px; color:#dff7ff }
+  .stat-number{ font-size:20px; font-weight:700; margin-top:8px; }
+
+  /* progress bar */
+  .progress {
+    width:100%; height:12px; background: rgba(255,255,255,0.03); border-radius:999px; overflow:hidden; margin-top:10px;
+  }
+  .progress .fill {
+    height:100%;
+    width:0%;
+    border-radius:999px;
+    background: linear-gradient(90deg,var(--accent-from),var(--accent-to));
+    transition: width 1.2s cubic-bezier(.2,.9,.2,1);
+  }
+
+  /* Count animation helper (for JS) */
+  .count { display:inline-block; min-width:38px; text-align:right; }
+
+  /* Timetable style */
+  table { width:100%; border-collapse:collapse; margin-top:12px; color:#eaf2ff; }
+  table th, table td { padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.03); font-size:14px; }
+
+  /* small footer btns row */
+  .btn-row { display:flex; gap:10px; margin-top:12px; }
+  .btn-row .btn { width:auto; padding:10px 12px; flex:1; }
+
+  /* tiny micro animations */
+  .pulse {
+    animation: pulse 1.6s infinite ease-in-out;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(63,163,255,0.10); }
+    70% { box-shadow: 0 0 0 10px rgba(63,163,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(63,163,255,0); }
+  }
+
+  /* small responsive */
+  @media (max-width:600px){
+    .stat-grid { grid-template-columns:1fr; }
+    .container { padding:12px; }
+    .page { margin:24px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- LOGIN PAGE -->
+  <div id="loginPage" class="page active">
+    <div class="topbar">
+      <div class="brand"><div class="logo">📚</div><div><div class="title">StudyHub</div><div style="font-size:12px;color:var(--muted)">ERP — Student Portal</div></div></div>
+      <div class="row"><div style="font-size:13px;color:var(--muted)">Secure</div></div>
+    </div>
+
+    <h2>Welcome back</h2>
+    <p class="muted">Sign in to continue to the student portal</p>
+
+    <label for="loginUser">Username</label>
+    <input id="loginUser" placeholder="Enter any username" type="text" autocomplete="username">
+
+    <label for="loginPass">Password</label>
+    <input id="loginPass" type="password" placeholder="Enter any password" autocomplete="current-password">
+
+    <button class="btn pulse" onclick="login()">Login</button>
+  </div>
+
+  <!-- STUDENT INFO PAGE -->
+  <div id="infoPage" class="page">
+    <div class="topbar">
+      <div class="brand"><div class="logo">📝</div><div><div class="title">Student Info</div><div style="font-size:12px;color:var(--muted)">Personal details</div></div></div>
+      <div class="row"><button class="btn" onclick="goto('loginPage')" style="background:transparent;border:1px solid rgba(255,255,255,0.03); color:var(--muted); padding:8px 10px; width:auto">Back</button></div>
+    </div>
+
+    <h2>Student Information</h2>
+    <p class="muted">Fill in the details below</p>
+
+    <label>Full Name</label>
+    <input id="fullName" type="text" placeholder="Your full name">
+
+    <label>Email</label>
+    <input id="email" type="text" placeholder="you@example.com">
+
+    <label>Phone</label>
+    <input id="phone" type="text" placeholder="+91 9xxxxxxxxx">
+
+    <label>Roll Number</label>
+    <input id="roll" type="text" placeholder="Roll number">
+
+    <button class="btn" onclick="saveInfo()">Save & Continue</button>
+  </div>
+
+  <!-- CLASS PAGE -->
+  <div id="classPage" class="page">
+    <div class="topbar">
+      <div class="brand"><div class="logo">🏫</div><div><div class="title">Class & Subject</div><div style="font-size:12px;color:var(--muted)">Choose class and subject</div></div></div>
+      <div class="row"><button class="btn" onclick="goto('infoPage')" style="background:transparent;border:1px solid rgba(255,255,255,0.03); color:var(--muted); padding:8px 10px; width:auto">Back</button></div>
+    </div>
+
+    <h2>Select Class</h2>
+
+    <label>Choose Class</label>
+    <select id="classSelect">
+      <option value="">Select</option>
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+      <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+    </select>
+
+    <label>Select Subject</label>
+    <select id="subjectSelect">
+      <option value="">Select</option>
+      <option>Maths</option><option>Science</option><option>English</option><option>Social</option>
+    </select>
+
+    <button class="btn" onclick="saveClass()">Save & View Summary</button>
+  </div>
+
+  <!-- SUMMARY PAGE -->
+  <div id="summaryPage" class="page">
+    <div class="topbar">
+      <div class="brand"><div class="logo">📋</div><div><div class="title">Summary</div><div style="font-size:12px;color:var(--muted)">Review your details</div></div></div>
+      <div class="row"><button class="btn" onclick="goto('dashboardPage')" style="background:transparent;border:1px solid rgba(255,255,255,0.03); color:var(--muted); padding:8px 10px; width:auto">Go to Dashboard</button></div>
+    </div>
+
+    <h2>Summary</h2>
+
+    <div id="summaryBox" class="summary-box">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="goto('infoPage')" style="background:transparent;border:1px solid rgba(255,255,255,0.03); color:var(--muted)">Edit Info</button>
+      <button class="btn" onclick="goto('dashboardPage')">Go to Dashboard</button>
+    </div>
+
+    <button class="btn" style="background:#ff5252;margin-top:12px" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div id="dashboardPage" class="page">
+    <div class="topbar">
+      <div class="brand"><div class="logo">📘</div><div><div class="title" id="dashName">Dashboard</div><div style="font-size:12px;color:var(--muted)" id="dashClass">Student Overview</div></div></div>
+      <div class="row">
+        <button class="btn" onclick="goto('summaryPage')" style="background:transparent;border:1px solid rgba(255,255,255,0.03); color:var(--muted); padding:8px 10px; width:auto">Summary</button>
+        <button class="btn" onclick="logout()" style="background:#ff5252">Logout</button>
+      </div>
+    </div>
+
+    <h2>Student Dashboard</h2>
+
+    <div id="dashBox" class="summary-box">
+      <!-- filled by JS -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <h3>Attendance</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="stat-number"><span class="count" id="attendanceCount">0</span>%</div>
+            <div style="font-size:12px;color:var(--muted)">Latest</div>
+          </div>
+          <div class="progress"><div id="attendanceBar" class="fill"></div></div>
+        </div>
+
+        <div class="stat-card">
+          <h3>Latest Marks</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="stat-number"><span class="count" id="marksCount">0</span>/100</div>
+            <div style="font-size:12px;color:var(--muted)">Exam</div>
+          </div>
+          <div style="height:10px; margin-top:12px; background: rgba(255,255,255,0.03); border-radius:999px; overflow:hidden">
+            <div id="marksBar" class="fill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <p style="margin:0; font-weight:600">Student Info</p>
+        <div id="infoSummary" style="margin-top:8px; color:#dff7ff"></div>
+      </div>
+    </div>
+
+    <h3 style="text-align:center; margin-top:18px;">📘 Timetable</h3>
+    <table>
+      <thead>
+        <tr><th>Day</th><th>Subject</th><th>Time</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Mon</td><td>Maths</td><td>9:00 AM</td></tr>
+        <tr><td>Tue</td><td>Science</td><td>10:00 AM</td></tr>
+        <tr><td>Wed</td><td>English</td><td>11:00 AM</td></tr>
+        <tr><td>Thu</td><td>Social</td><td>12:00 PM</td></tr>
+        <tr><td>Fri</td><td>Maths</td><td>1:00 PM</td></tr>
+      </tbody>
+    </table>
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn" onclick="goto('summaryPage')">Back to Summary</button>
+      <button class="btn" style="background:#7f8aff" onclick="randomizeStats()">Refresh Stats</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* --------------- Page transition helpers --------------- */
+const pages = [...document.querySelectorAll('.page')];
+let currentPage = document.querySelector('.page.active');
+
+function goto(pageId){
+  const target = document.getElementById(pageId);
+  if(!target || target === currentPage) return;
+
+  // Exit current
+  currentPage.classList.remove('enter');
+  currentPage.classList.add('exit');
+
+  // After exit animation, hide it and show target
+  setTimeout(()=> {
+    currentPage.classList.remove('active', 'exit');
+    currentPage.style.display = 'none';
+
+    // Prepare target
+    target.style.display = 'block';
+    // small delay to ensure animation picks up
+    requestAnimationFrame(() => {
+      target.classList.add('active', 'enter');
+      // remove enter after animation
+      setTimeout(()=> target.classList.remove('enter'), 600);
+    });
+
+    currentPage = target;
+    // if we navigate to dashboard, populate
+    if(pageId === 'dashboardPage') showDashboard();
+    if(pageId === 'summaryPage') showSummary();
+  }, 420); // match CSS duration ~480ms
+}
+
+/* --------------- Login & Storage logic --------------- */
+function login(){
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  if(!user || !pass){ alert('Enter username and password (anything is allowed)'); return; }
+  goto('infoPage');
+}
+
+function saveInfo(){
+  const info = {
+    name: document.getElementById('fullName').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    roll: document.getElementById('roll').value.trim()
+  };
+  if(!info.name || !info.email || !info.phone || !info.roll){
+    alert('Fill all student details');
+    return;
+  }
+  localStorage.setItem('info', JSON.stringify(info));
+  goto('classPage');
+}
+
+function saveClass(){
+  const cls = document.getElementById('classSelect').value;
+  const sub = document.getElementById('subjectSelect').value;
+  if(!cls || !sub){ alert('Select class and subject'); return; }
+  localStorage.setItem('classInfo', JSON.stringify({cls, sub}));
+  showSummary();
+  goto('summaryPage');
+}
+
+function logout(){
+  localStorage.clear();
+  // clear form fields (nice UX)
+  ['loginUser','loginPass','fullName','email','phone','roll'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['classSelect','subjectSelect'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  goto('loginPage');
+}
+
+/* --------------- UI population --------------- */
+function showSummary(){
+  const info = JSON.parse(localStorage.getItem('info') || '{}');
+  const cls = JSON.parse(localStorage.getItem('classInfo') || '{}');
+
+  const summaryBox = document.getElementById('summaryBox');
+  if(!info.name){
+    summaryBox.innerHTML = `<p style="color:var(--muted)">No student info saved yet.</p>`;
+    return;
+  }
+  summaryBox.innerHTML = `
+    <p><strong>Name:</strong> ${escapeHtml(info.name)}</p>
+    <p><strong>Email:</strong> ${escapeHtml(info.email)}</p>
+    <p><strong>Phone:</strong> ${escapeHtml(info.phone)}</p>
+    <p><strong>Roll:</strong> ${escapeHtml(info.roll)}</p>
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03); margin:10px 0">
+    <p><strong>Class:</strong> ${escapeHtml(cls.cls||'')}</p>
+    <p><strong>Subject:</strong> ${escapeHtml(cls.sub||'')}</p>
+  `;
+}
+
+/* --------------- Dashboard & animated stats --------------- */
+function showDashboard(){
+  const info = JSON.parse(localStorage.getItem('info') || '{}');
+  const cls = JSON.parse(localStorage.getItem('classInfo') || '{}');
+
+  // populate header
+  document.getElementById('dashName').textContent = info.name ? info.name : 'Student Dashboard';
+  document.getElementById('dashClass').textContent = cls.cls ? `Class ${cls.cls} • ${cls.sub||''}` : 'Student Overview';
+
+  // populate info summary
+  const infoSummary = document.getElementById('infoSummary');
+  infoSummary.innerHTML = info.name ? `<div><strong>${escapeHtml(info.name)}</strong> • Roll ${escapeHtml(info.roll)}</div><div style="color:var(--muted);font-size:13px;margin-top:4px">${escapeHtml(info.email)} • ${escapeHtml(info.phone)}</div>` : `<div style="color:var(--muted)">No data</div>`;
+
+  // Randomized stats (or fixed seed)
+  const attendance = Math.floor(80 + Math.random() * 20); // 80-99
+  const marks = Math.floor(60 + Math.random() * 40); // 60-99
+
+  animateCount('attendanceCount', 0, attendance, 900);
+  animateProgress('attendanceBar', attendance);
+
+  animateCount('marksCount', 0, marks, 900);
+  animateProgress('marksBar', marks);
+}
+
+/* Trigger refresh from button */
+function randomizeStats(){
+  showDashboard();
+}
+
+/* --------------- little helpers --------------- */
+function animateCount(id, from, to, duration){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const start = performance.now();
+  const diff = to - from;
+  function step(now){
+    const t = Math.min(1, (now - start) / duration);
+    const val = Math.floor(from + diff * easeOutCubic(t));
+    el.textContent = val;
+    if(t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function animateProgress(id, percent){
+  const el = document.getElementById(id);
+  if(!el) return;
+  // ensure percent between 0 and 100
+  const p = Math.max(0, Math.min(100, Number(percent)));
+  // tiny delay so animation is visible
+  setTimeout(()=> el.style.width = p + '%' , 80);
+}
+
+function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
+
+/* simple HTML-escape helper to avoid trivial injection */
+function escapeHtml(str){
+  if(!str) return '';
+  return String(str).replace(/[&<>"'`=\/]/g, function(s) {
+    return {
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;'
+    }[s];
+  });
+}
+
+/* On first load: if info exists, prefill fields & show dashboard shortcuts */
+(function init(){
+  const savedInfo = JSON.parse(localStorage.getItem('info') || 'null');
+  const savedClass = JSON.parse(localStorage.getItem('classInfo') || 'null');
+  if(savedInfo){
+    document.getElementById('fullName').value = savedInfo.name || '';
+    document.getElementById('email').value = savedInfo.email || '';
+    document.getElementById('phone').value = savedInfo.phone || '';
+    document.getElementById('roll').value = savedInfo.roll || '';
+  }
+  if(savedClass){
+    document.getElementById('classSelect').value = savedClass.cls || '';
+    document.getElementById('subjectSelect').value = savedClass.sub || '';
+  }
+})();
+</script>
+</body>
+</html>
